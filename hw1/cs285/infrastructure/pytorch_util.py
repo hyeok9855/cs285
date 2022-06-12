@@ -45,9 +45,15 @@ def build_mlp(
     if isinstance(output_activation, str):
         output_activation = _str_to_activation[output_activation]
 
-    # TODO: return a MLP. This should be an instance of nn.Module
-    # Note: nn.Sequential is an instance of nn.Module.
-    raise NotImplementedError
+    # return a MLP.
+    assert n_layers >= 1, "Add at least one hidden layer."
+    layers = []
+    layers.append(nn.Linear(input_size, size))
+    for _ in range(n_layers - 1):
+        layers.extend([activation, nn.Linear(size, size)])
+    layers.extend([output_activation, nn.Linear(size, output_size)])
+
+    return nn.Sequential(*layers)
 
 
 device = None
