@@ -58,7 +58,7 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
                 n_layers=self.n_layers, size=self.size,
             )
             self.mean_net.to(ptu.device)
-            self.logstd = nn.Parameter(
+            self.logstd = nn.parameter.Parameter(
                 torch.zeros(self.ac_dim, dtype=torch.float32, device=ptu.device)
             )
             self.logstd.to(ptu.device)
@@ -108,11 +108,11 @@ class MLPPolicySL(MLPPolicy):
     def update(self, observations: np.ndarray, actions: np.ndarray, **kwargs) -> Dict:
         assert len(observations) == len(actions), "Check the lengths"
 
-        observations = ptu.from_numpy(observations)
-        actions = ptu.from_numpy(actions)
+        observations_t = ptu.from_numpy(observations)
+        actions_t = ptu.from_numpy(actions)
 
-        distn = self(observations)
-        loss = -distn.log_prob(actions).mean()
+        distn = self(observations_t)
+        loss = -distn.log_prob(actions_t).mean()
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -121,9 +121,11 @@ class MLPPolicySL(MLPPolicy):
 
     def forward(self, observation: torch.FloatTensor) -> Any:
         if self.discrete:
+            assert self.logits_na is not None
             logits = self.logits_na(observation)
             return distributions.Categorical(logits=logits)
         else:
+            assert self.mean_net is not None and self.logstd is not None
             loc = self.mean_net(observation)
             scale = torch.exp(self.logstd[None])
             return distributions.Normal(loc=loc, scale=scale)
