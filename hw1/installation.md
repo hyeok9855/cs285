@@ -45,21 +45,9 @@ A. (Recommended) Install with conda:
 	pip install --user -r requirements.txt
 	```
 
-	5. Allow your code to be able to see 'cs285'
-	```
-	cd <path_to_hw1>
-	$ pip install -e .
 	```
 
 This conda environment requires activating it every time you open a new terminal (in order to run code), but the benefit is that the required dependencies for this codebase will not affect existing/other versions of things on your computer. This stand-alone environment will have everything that is necessary.
-
-
-B. Install on system Python:
-	```
-	pip install -r requirements.txt
-  cd <path_to_hw1>
-  pip install -e .
-	```
 
 
 ## Debugging issues with installing `mujoco-py`
