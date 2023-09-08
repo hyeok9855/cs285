@@ -14,9 +14,4 @@ swig==4.0.2
 networkx==2.5
 box2d-py==2.3.8
 cython<3.0
-
--e ./hw1
--e ./hw2
--e ./hw3
--e ./hw4
--e ./hw5
+pyglet==1.5.27
