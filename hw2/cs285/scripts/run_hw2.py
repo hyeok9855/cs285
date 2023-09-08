@@ -1,6 +1,11 @@
+import sys
 import os
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))))
+
 import time
 
+from pyvirtualdisplay.display import Display
 from cs285.infrastructure.rl_trainer import RL_Trainer
 from cs285.agents.pg_agent import PGAgent
 
@@ -69,6 +74,7 @@ def main():
     parser.add_argument('--train_batch_size', '-tb', type=int, default=1000) ##steps used per gradient step
 
     parser.add_argument('--num_agent_train_steps_per_iter', type=int, default=1)
+    parser.add_argument('--num_gradient_steps_per_traj', type=int, default=1)
     parser.add_argument('--discount', type=float, default=1.0)
     parser.add_argument('--learning_rate', '-lr', type=float, default=5e-3)
     parser.add_argument('--n_layers', '-l', type=int, default=2)
@@ -94,7 +100,7 @@ def main():
     # note that, to avoid confusion, you don't even have a train_batch_size argument anymore (above)
     params['train_batch_size'] = params['batch_size']
 
-##################################
+    ##################################
     ### CREATE DIRECTORY FOR LOGGING
     ##################################
 
@@ -111,12 +117,23 @@ def main():
     if not(os.path.exists(logdir)):
         os.makedirs(logdir)
 
+    ####################################
+    ### Virtual display for rendering
+    ####################################
+    display = None
+    if params['video_log_freq'] > 0:
+        display = Display(visible=False, size=(400, 300), backend="xvfb")
+        display.start()
+
     ###################
     ### RUN TRAINING
     ###################
 
     trainer = PG_Trainer(params)
     trainer.run_training_loop()
+
+    if display is not None:
+        display.stop()
 
 
 if __name__ == "__main__":

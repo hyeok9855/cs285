@@ -5,6 +5,7 @@ import sys
 import time
 
 import gym
+from gym import spaces
 from gym import wrappers
 import numpy as np
 import torch
@@ -63,7 +64,7 @@ class RL_Trainer(object):
         MAX_VIDEO_LEN = self.params['ep_len']
 
         # Is this env continuous, or self.discrete?
-        discrete = isinstance(self.env.action_space, gym.spaces.Discrete)
+        discrete = isinstance(self.env.action_space, spaces.Discrete)
         # Are the observations images?
         img = len(self.env.observation_space.shape) > 2
 
@@ -116,9 +117,9 @@ class RL_Trainer(object):
 
             # decide if videos should be rendered/logged at this iteration
             if itr % self.params['video_log_freq'] == 0 and self.params['video_log_freq'] != -1:
-                self.logvideo = True
+                self.log_video = True
             else:
-                self.logvideo = False
+                self.log_video = False
 
             # decide if metrics should be logged
             if self.params['scalar_log_freq'] == -1:
@@ -142,7 +143,7 @@ class RL_Trainer(object):
             train_logs = self.train_agent()
 
             # log/save
-            if self.logvideo or self.logmetrics:
+            if self.log_video or self.logmetrics:
                 # perform logging
                 print('\nBeginning logging procedure...')
                 self.perform_logging(itr, paths, eval_policy, train_video_paths, train_logs)
@@ -153,11 +154,53 @@ class RL_Trainer(object):
     ####################################
     ####################################
 
-    def collect_training_trajectories(self, itr, initial_expertdata, collect_policy, batch_size):
-        # TODO: GETTHIS from HW1
+    def collect_training_trajectories(
+            self,
+            itr,
+            load_initial_expertdata,
+            collect_policy,
+            batch_size,
+    ):
+        """
+        :param itr:
+        :param load_initial_expertdata:  path to expert data pkl file
+        :param collect_policy:  the current policy using which we collect data
+        :param batch_size:  the number of transitions we collect
+        :return:
+            paths: a list trajectories
+            envsteps_this_batch: the sum over the numbers of environment steps in paths
+            train_video_paths: paths which also contain videos for visualization purposes
+        """
+        # collect `batch_size` samples to be used for training
+        print("\nCollecting data to be used for training...")
+        paths, envsteps_this_batch = None, 0
+        train_video_paths = None
+
+        paths, envsteps_this_batch = utils.sample_trajectories(self.env, collect_policy, batch_size, self.params['ep_len'])
+
+        # collect more rollouts with the same policy, to be saved as videos in tensorboard
+        # note: here, we collect MAX_NVIDEO rollouts, each of length MAX_VIDEO_LEN
+        if self.log_video:
+            print('\nCollecting train rollouts to be used for saving videos...')
+            train_video_paths = utils.sample_n_trajectories(self.env, collect_policy, MAX_NVIDEO, MAX_VIDEO_LEN, True)
+
+        return paths, envsteps_this_batch, train_video_paths
 
     def train_agent(self):
-        # TODO: GETTHIS from HW1
+        print('\nTraining agent using sampled data from replay buffer...')
+        all_logs = []
+        for train_step in range(self.params['num_agent_train_steps_per_iter']):
+            # sample some data from the data buffer
+            (
+                ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch
+            ) = self.agent.sample(self.params["train_batch_size"])
+
+            # use the sampled data to train an agent
+            for i in range(self.params['num_gradient_steps_per_traj']):
+                train_log = self.agent.train(ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch)
+            # keep the agent's training log for debugging
+            all_logs.append(train_log)  # type: ignore
+        return all_logs
 
     ####################################
     ####################################
@@ -173,7 +216,7 @@ class RL_Trainer(object):
         eval_paths, eval_envsteps_this_batch = utils.sample_trajectories(self.env, eval_policy, self.params['eval_batch_size'], self.params['ep_len'])
 
         # save eval rollouts as videos in tensorboard event file
-        if self.logvideo and train_video_paths != None:
+        if self.log_video and train_video_paths != None:
             print('\nCollecting video rollouts eval')
             eval_video_paths = utils.sample_n_trajectories(self.env, eval_policy, MAX_NVIDEO, MAX_VIDEO_LEN, True)
 
