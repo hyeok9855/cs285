@@ -4,6 +4,7 @@ import numpy as np
 import time
 
 import gym
+from gym import spaces
 import torch
 
 from cs285.infrastructure import pytorch_util as ptu
@@ -49,7 +50,7 @@ class RL_Trainer(object):
         MAX_VIDEO_LEN = self.params['ep_len']
 
         # Is this env continuous, or self.discrete?
-        discrete = isinstance(self.env.action_space, gym.spaces.Discrete)
+        discrete = isinstance(self.env.action_space, spaces.Discrete)  # type: ignore
         self.params['agent_params']['discrete'] = discrete
 
         # Observation and action sizes
